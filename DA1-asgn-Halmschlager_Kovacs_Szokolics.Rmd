@@ -1,0 +1,182 @@
+---
+title: "DA1 Assignment - Task 2"
+author: "Halmschlager, Kovacs, Szokolics"
+date: "9/25/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("data.table")
+library("tidyverse")
+```
+
+## Introduction
+
+During a previous task (task 1) we collected the prices of two products ((1) Coca Cola, 0.5l plastic bottle and (2) Orbit, chewing gum, peppermint, single pack) and data on the shops where the prices were collected (address, google rating, shop type, number of cashiers). This data collections forms the basis for the following task:
+
+## Task 2 - Description: Create a report describing your data. (6p)
+
+- Submit a single pdf, code and data in a zipped file
+- Discuss the data collection, difficulties, problems. How you picked product 2. How did you decide on store features to record and how did you code it? (2-3 paragraphs) [1p]
+- Present descriptive statistics of prices. You may do it with one or two tables as you see fit [1p]
+- Show two descriptive graphs of price distributions of your products in the whole data (ie two districts merged). [0.5p]
+- Show two descriptive graphs of price distributions of Coca Cola in the two districts merged [0.5p]
+- Test if the price of Coca Cola is the same in the two districts. [1p]
+- Summarize your findings regarding price distributions [1p]
+- Now pick any feature of stores and create a binary variable. Pool your data across districts. Compare prices by this new variable and discuss. [1p]"
+
+## Data Collection
+
+**Difficulties encountered:**
+
+- To find a product that is widely available in all kinds of shops.
+- Decide on how to measure quality and size of a store. For example it is not possible to find out the exact square meter of a store. What else could reflect if a store was large or small?
+- Some small shops did not have price tags for all products so it was necessary to purchase the product on order to assess the price.
+- Some shop assistants asked not to take any pictures.
+
+**Product 2:**
+The second product (Orbit, chewing gum, peppermint, single pack) was chosen mainly because it is widely available in shops, gas stations, local stores etc. It is also easy to define in terms of brand, size and flavour.
+
+**Store Features:**
+The store features (Google rating, Shop	type, Number_of_cashiers) were chosen to reflect the quality, the type and the size of the shop. For quality we decided to use an official rating rather than an individual assessment, and included the google rating for the individual shop. The type of shop was chosen among a list of types we had agreed on before collecting the data. To express the size of a shop we counted the number of cash desks in the shop.
+
+## Descriptive statistics of prices
+
+```{r descriptive_statistics, message=FALSE}
+# import data
+products <- read_csv("da1-asgn-Halmschlager_Kovacs_Szokolics-data.csv")
+
+# min,max,avg price of product 1 and 2
+products %>% group_by(Product) %>% summarize(Mean=mean(Price), Min=min(Price), Max=max(Price))
+```
+
+## Descriptive graphs of price distribution
+
+```{r descriptive_graphs, message=FALSE}
+# The following chart shows the price distribution per product (grey bars) and the respective density plot (red line)
+
+ggplot(products, aes(Price)) +
+  geom_histogram(aes(y=..count..), binwidth=10) +
+  geom_density(aes(y=10*..count..),colour="red") +
+  facet_grid(. ~ Product) +
+  labs(x = "Price in HUF, incl VAT",
+      title ="Price distribution + density plot")
+```
+
+```{r descriptive_graphs_notes, include=FALSE}
+# A Density Plot visualises the distribution of data over a continuous interval or time period. This chart is a variation of a Histogram that uses kernel smoothing to plot values, allowing for smoother distributions by smoothing out the noise. The peaks of a Density Plot help display where values are concentrated over the interval.
+# 
+# An advantage Density Plots have over Histograms is that they're better at determining the distribution shape because they're not affected by the number of bins used (each bar used in a typical histogram). A Histogram comprising of only 4 bins wouldn't produce a distinguishable enough shape of distribution as a 20-bin Histogram would. However, with Density Plots, this isn't an issue.
+```
+
+## Descriptive graphs of prices for Coca Cola
+
+```{r descriptive_graph_Coke, message=FALSE}
+# Show two descriptive graphs of price distributions of Coca Cola in the two districts merged [0.5p]
+
+# add inner/outer district variable to dataset
+products %>% group_by(Address_ZIP) %>% summarise(count = n()) # shows distinct ZIP codes in dataset
+Districts <- data.frame(Zip = c(1111,1114,1117,1171,1173), District = c("inner","inner","inner","outer","outer"), stringsAsFactors = FALSE) # df showing inner/outer district per ZIP code
+
+products2 <- products %>% left_join(Districts, by =c("Address_ZIP" = "Zip")) # join district to products table
+
+ggplot(products2, aes(Price)) +
+  geom_histogram(aes(y=..count..), binwidth=10) +
+  geom_density(aes(y=10*..count..),colour="red") +
+  facet_grid(. ~ District) +
+  labs(x = "Price in HUF, incl VAT",
+      title ="Price distribution of Coke in inner and outer districts of Budapest")
+```
+
+
+## Price comparison for Coca Cola in different districts
+
+To test if the price of Coca Cola is the same in the two districts, we are using three different methods.
+First we look at the min,max and avg prices of coke in both districts, then we run a t.test, followed by a basic regression model to test whether there is a significant difference between prices in inner and outer districts.
+
+**Min, max, avg prices**
+```{r avg_Coke, message=FALSE}
+# min,max,avg price of product 1 and 2
+products2 %>% filter(Product_ID == 1) %>% group_by(District) %>% summarize(Mean=mean(Price), Min=min(Price), Max=max(Price))
+```
+
+From this table we can assume that the price span is higher in the outer districts than in the inner districts.
+
+**T-test:**
+```{r ttest_Coke, message=FALSE}
+# The null hypothesis: the values (price of coca cola) in the inner and outer district are the same distrubution.
+t.test(Price ~ factor(District), data=products2[products2$Product_ID==1,])
+```
+
+The t-test shows p > 0.05 which means there is no significant difference in the distribution of values between the two groups (inner vs outer district). 
+
+```{r ttest_Coke_notes, include=FALSE}
+# The t test is one type of inferential statistics and is used to determine whether there is a significant difference between the means of two groups. The difference between two groups (such as an inner district vs. outer district) is judged to be statistically significant when p = 0.05 or less. Or in other words: A small p-value (typically 0.05) indicates strong evidence against the null hypothesis, so you reject the null hypothesis.
+# 
+# The null hypothesis: the values (price of coca cola) in the inner and outer district are the same distrubution.
+```
+
+**Regression:**
+```{r regression_Coke, message=FALSE}
+# + + + + should this part be included? The result is the same as in the t-test, p = 0.208
+
+# basic regression model, checking for a relationship between Price of Product 1 and District
+mod1 <- lm(Price ~ District, data=products2[products2$Product_ID==1,])
+
+# Compare estimates and level of significance from model1:
+summary(mod1)
+```
+
+The regression model also shows p > 0.05 which means there is no significant difference in the distribution of values between the two groups (inner vs outer district). 
+
+**Regression with control variable:**
+```{r regression_control_Coke, message=FALSE}
+# simple model with indicators for inner vs outer district, controlling for shop type.
+mod2 <- lm(Price~District + Type, data=products2[products2$Product_ID==1,])
+
+# Compare estimates and level of significance from model2:
+summary(mod2)
+```
+
+```{r regression_control_Coke_notes, include=FALSE}
+# Regression analysis examines the relationship between two or more variables of interest. Categorical values are transformed to Dummy (indicator) variables. Categorical variables with k-levels require (k-1) dummy variables. 
+# Control variables in statistics is defined as a constant whose value does not change throughout the experiment process. A control variable can strongly influence the results in an experiment.
+```
+
+With the previous t-test without controlling for shop type there is very little difference between inner and outer district, but in the regression model which includes the control variable the effect on the dependent variable becomes more apparent (Districtouter p-value  < 0.05).
+
+```{r regression_visuals1, warning=FALSE}  
+ggplot(products2[products2$Product_ID == 
+    1, ], aes(x=District, y=Price, colour=Type)) + 
+  geom_boxplot()
+```
+
+## Price comparison for both products in both districts by shop size
+
+The size of the shop should be visible through the number of cashiers available in the particular shop.
+We are going to distinguish between small shops (1 cashier) and medium/large shops (>1 cashier).
+The dummy variable is going to be 1 = small, 0 = not small
+
+```{r shop_size, message=FALSE}
+# 
+products3 <- products %>% mutate(Size = ifelse(Number_of_cashiers==1,1,0))
+products3 %>% group_by(Size) %>% summarize(count = n())
+```
+
+Now we compare the prices among all districts with regards to the size of the shop.
+
+**Regression:**
+```{r regression_Coke_Size, message=FALSE}
+# + + + + should this part be included? The result is the same as in the t-test, p = 0.208
+
+# basic regression model, checking for a relationship between Price of Product 1 and District
+mod3_1 <- lm(Price ~ Size, data=products3[products$Product_ID==1,])
+
+# Compare estimates and level of significance from model1:
+summary(mod3_1)
+```
+
+The regression model shows p > 0.05 which means there is no significant difference in the distribution of values between small size shops and medium/large size shops.

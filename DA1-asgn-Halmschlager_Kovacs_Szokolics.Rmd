@@ -49,6 +49,11 @@ The store features (Google rating, Shop	type, Number_of_cashiers) were chosen to
 # import data
 products <- read_csv("da1-asgn-Halmschlager_Kovacs_Szokolics-data.csv")
 
+# clean data ???????????
+# find NAs ?????????
+# find duplicates ???????
+# or at least show that there are no missing or duplicate values????
+
 # min,max,avg price of product 1 and 2
 products %>% group_by(Product) %>% summarize(Mean=mean(Price), Min=min(Price), Max=max(Price))
 ```
@@ -59,8 +64,8 @@ products %>% group_by(Product) %>% summarize(Mean=mean(Price), Min=min(Price), M
 # The following chart shows the price distribution per product (grey bars) and the respective density plot (red line)
 
 ggplot(products, aes(Price)) +
-  geom_histogram(aes(y=..count..), binwidth=10) +
-  geom_density(aes(y=10*..count..),colour="red") +
+  geom_histogram(aes(y=..count..), binwidth=20) +
+  geom_density(aes(y=20*..count..),colour="red") +
   facet_grid(. ~ Product) +
   labs(x = "Price in HUF, incl VAT",
       title ="Price distribution + density plot")
@@ -72,9 +77,23 @@ ggplot(products, aes(Price)) +
 # An advantage Density Plots have over Histograms is that they're better at determining the distribution shape because they're not affected by the number of bins used (each bar used in a typical histogram). A Histogram comprising of only 4 bins wouldn't produce a distinguishable enough shape of distribution as a 20-bin Histogram would. However, with Density Plots, this isn't an issue.
 ```
 
+```{r descriptive_graphs_2, message=FALSE}
+# The following chart shows the price distribution per product for different type of stores
+
+# Dotplot shows stacked dots, with each dot representing one observation
+# When binning along the x axis and stacking along the y axis, the numbers on y axis are not meaningful, due to technical limitations of ggplot2. Therefore the y axis is hidden.
+
+ggplot(products, aes(Price, fill = Type)) +
+  geom_dotplot(method = "histodot", binwidth = 20) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  facet_grid(. ~ Product) +
+  labs(x = "Price in HUF, incl VAT",
+      title ="Price distribution per shop type")
+```
+
 ## Descriptive graphs of prices for Coca Cola
 
-```{r descriptive_graph_Coke, message=FALSE}
+```{r descriptive_graph_Coke_1, message=FALSE}
 # Show two descriptive graphs of price distributions of Coca Cola in the two districts merged [0.5p]
 
 # add inner/outer district variable to dataset
@@ -82,10 +101,12 @@ products %>% group_by(Address_ZIP) %>% summarise(count = n()) # shows distinct Z
 Districts <- data.frame(Zip = c(1111,1114,1117,1171,1173), District = c("inner","inner","inner","outer","outer"), stringsAsFactors = FALSE) # df showing inner/outer district per ZIP code
 
 products2 <- products %>% left_join(Districts, by =c("Address_ZIP" = "Zip")) # join district to products table
+```
 
+```{r descriptive_graph_Coke_2, message=FALSE}
 ggplot(products2, aes(Price)) +
-  geom_histogram(aes(y=..count..), binwidth=10) +
-  geom_density(aes(y=10*..count..),colour="red") +
+  geom_histogram(aes(y=..count..), binwidth=20) +
+  geom_density(aes(y=20*..count..),colour="red") +
   facet_grid(. ~ District) +
   labs(x = "Price in HUF, incl VAT",
       title ="Price distribution of Coke in inner and outer districts of Budapest")
